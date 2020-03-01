@@ -20,6 +20,7 @@ ENV APT_OPTION="-yq --no-install-recommends"
 ENV BUILD_DEPS="autoconf file g++ gcc libc-dev pkg-config re2c"
 ENV DEBIAN_FRONTEND="noninteractive"
 ENV LIB_DEPS="zlib1g-dev libzip-dev"
+ENV NODE_VERSION=12
 ENV TOOLS_DEPS="apt-utils curl git graphviz make rsync software-properties-common unzip zip wget"
 
 # Prepare system by upgrading existing
@@ -59,3 +60,8 @@ RUN apt-get install $APT_OPTION php$PHP_VERSION-cli \
   php$PHP_VERSION-psr \
   php$PHP_VERSION-xhprof \
   php$PHP_VERSION-yaml
+
+# Install node
+RUN curl -sL "https://deb.nodesource.com/setup_${NODE_VERSION}.x" | bash - \
+  && apt-get install $APT_OPTION nodejs build-essential
+
