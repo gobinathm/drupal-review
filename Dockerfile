@@ -62,6 +62,11 @@ RUN apt-get install $APT_OPTION php$PHP_VERSION-cli \
   php$PHP_VERSION-yaml
 
 # Install node
-RUN curl -sL "https://deb.nodesource.com/setup_${NODE_VERSION}.x" | bash - \
+RUN curl -sL "https://deb.nodesource.com/setup_$NODE_VERSION.x" | bash - \
   && apt-get install $APT_OPTION nodejs build-essential
 
+# Install lighthouse
+RUN npm install -g lighthouse
+
+# Perform Clean Up
+RUN rm -rf $COMPOSER_HOME/cache && apt-get purge -y --auto-remove $BUILD_DEPS
