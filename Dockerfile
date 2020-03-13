@@ -21,6 +21,7 @@ ENV BUILD_DEPS="autoconf file g++ gcc libc-dev pkg-config re2c"
 ENV DEBIAN_FRONTEND="noninteractive"
 ENV LIB_DEPS="zlib1g-dev libzip-dev"
 ENV NODE_VERSION=12
+ENV SONAR_CLI="4.4.0.2170"
 ENV TOOLS_DEPS="apt-utils curl git graphviz make rsync software-properties-common unzip zip wget"
 
 # Prepare system by upgrading existing
@@ -60,6 +61,13 @@ RUN apt-get install $APT_OPTION php$PHP_VERSION-cli \
   php$PHP_VERSION-psr \
   php$PHP_VERSION-xhprof \
   php$PHP_VERSION-yaml
+
+# Install sonar-scanner
+RUN cd /tmp \
+  && wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-$SONAR_CLI-linux.zip \
+  && unzip sonar-scanner-cli-$SONAR_CLI-linux.zip -d /opt \
+  && ln -s /opt/sonar-scanner-$SONAR_CLI-linux/bin/sonar-scanner /usr/bin/sonar-scanner \
+  && rm -f sonar-scanner-cli-$SONAR_CLI-linux.zip
 
 # Install node
 RUN curl -sL "https://deb.nodesource.com/setup_$NODE_VERSION.x" | bash - \
