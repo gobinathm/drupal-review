@@ -62,6 +62,17 @@ RUN apt-get install $APT_OPTION php$PHP_VERSION-cli \
   php$PHP_VERSION-xhprof \
   php$PHP_VERSION-yaml
 
+# install php ast extension
+WORKDIR /tmp
+RUN git clone https://github.com/nikic/php-ast.git && cd php-ast\
+  && phpize && ./configure && make && make install && cd .. \
+  && rm -rf php-ast \
+  && echo "date.timezone=America/New York" >> /etc/php/$PHP_VERSION/cli/php.ini \
+  && echo "memory_limit=-1" >> /etc/php/$PHP_VERSION/cli/php.ini \
+  && echo "phar.readonly=0" >> /etc/php/$PHP_VERSION/cli/php.ini \
+  && echo "extension=ast.so" >> /etc/php/$PHP_VERSION/cli/php.ini \
+  && echo "pcov.enabled=0" >> /etc/php/$PHP_VERSION/cli/php.ini
+
 # Install sonar-scanner
 RUN cd /tmp \
   && wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-$SONAR_CLI-linux.zip \
@@ -70,11 +81,8 @@ RUN cd /tmp \
   && rm -f sonar-scanner-cli-$SONAR_CLI-linux.zip
 
 # Install node
-RUN curl -sL "https://deb.nodesource.com/setup_$NODE_VERSION.x" | bash - \
+RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - \
   && apt-get install $APT_OPTION nodejs build-essential
 
 # Install lighthouse
 RUN npm install -g lighthouse
-
-# Perform Clean Up
-RUN rm -rf $COMPOSER_HOME/cache && apt-get purge -y --auto-remove $BUILD_DEPS
