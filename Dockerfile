@@ -18,11 +18,15 @@ ARG PHP_VERSION="7.3"
 # Environment Variables
 ENV APT_OPTION="-yq --no-install-recommends"
 ENV BUILD_DEPS="autoconf file g++ gcc libc-dev pkg-config re2c"
+ENV COMPOSER_ALLOW_SUPERUSER 1
+ENV COMPOSER_HOME=$TOOLS_TARGET_DIR/.composer
 ENV DEBIAN_FRONTEND="noninteractive"
 ENV LIB_DEPS="zlib1g-dev libzip-dev"
-ENV NODE_VERSION=12
+ENV PATH="$PATH:/src/bin:$TOOLS_TARGET_DIR:$TOOLS_TARGET_DIR/.composer/vendor/bin"
 ENV SONAR_CLI="4.4.0.2170"
 ENV TOOLS_DEPS="apt-utils curl git graphviz make rsync software-properties-common unzip zip wget"
+ENV TOOLS_TARGET_DIR="/tools"
+ENV TOOLS_VERSION="1.20.0"
 
 # Prepare system by upgrading existing
 RUN apt-get update 
@@ -73,6 +77,13 @@ RUN git clone https://github.com/nikic/php-ast.git && cd php-ast\
   && echo "extension=ast.so" >> /etc/php/$PHP_VERSION/cli/php.ini \
   && echo "pcov.enabled=0" >> /etc/php/$PHP_VERSION/cli/php.ini
 
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# PHP Tools Install & Configure
+RUN mkdir -p $TOOLS_TARGET_DIR && curl -Ls https://github.com/jakzal/toolbox/releases/download/v$TOOLS_VERSION/toolbox.phar -o $TOOLS_TARGET_DIR/toolbox \
+  && chmod +x $TOOLS_TARGET_DIR/toolbox \
+  && php $TOOLS_TARGET_DIR/toolbox install
+
 # Install sonar-scanner
 RUN cd /tmp \
   && wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-$SONAR_CLI-linux.zip \
@@ -86,3 +97,9 @@ RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - \
 
 # Install lighthouse
 RUN npm install -g lighthouse
+
+# Perform Clean Up
+RUN rm -rf $COMPOSER_HOME/cache && apt-get purge -y --auto-remove $BUILD_DEPS
+
+# set workdir
+WORKDIR $TOOLS_TARGET_DIR
