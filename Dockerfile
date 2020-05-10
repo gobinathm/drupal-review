@@ -21,6 +21,8 @@ ENV BUILD_DEPS="autoconf file g++ gcc libc-dev pkg-config re2c"
 ENV COMPOSER_ALLOW_SUPERUSER 1
 ENV COMPOSER_HOME=$TOOLS_TARGET_DIR/.composer
 ENV DEBIAN_FRONTEND="noninteractive"
+ENV DRUPAL_CHECK_VERSION="1.0.9"
+ENV DRUPAL_TOOLS_DIR="/drupaltools"
 ENV LIB_DEPS="zlib1g-dev libzip-dev"
 ENV PATH="$PATH:/src/bin:$TOOLS_TARGET_DIR:$TOOLS_TARGET_DIR/.composer/vendor/bin"
 ENV SONAR_CLI="4.4.0.2170"
@@ -83,6 +85,26 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 RUN mkdir -p $TOOLS_TARGET_DIR && curl -Ls https://github.com/jakzal/toolbox/releases/download/v$TOOLS_VERSION/toolbox.phar -o $TOOLS_TARGET_DIR/toolbox \
   && chmod +x $TOOLS_TARGET_DIR/toolbox \
   && php $TOOLS_TARGET_DIR/toolbox install
+
+# copy composer configurations
+COPY composer.json /$DRUPAL_TOOLS_DIR/composer.json
+COPY composer.lock /$DRUPAL_TOOLS_DIR/composer.lock
+
+# Install Dependency
+WORKDIR $DRUPAL_TOOLS_DIR
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install
+
+RUN git clone https://git.drupalcode.org/sandbox/coltrane-1921926.git drupalsecure \
+    && git clone https://github.com/klausi/pareviewsh.git \
+    && rm -rf ./drupalsecure/.git/ ./pareviewsh/.git/ \
+    && curl -Ls https://github.com/mglaman/drupal-check/releases/download/$DRUPAL_CHECK_VERSION/drupal-check.phar -o $TOOLS_TARGET_DIR/drupal-check \
+    && chmod +x $TOOLS_TARGET_DIR/drupal-check
+
+# Drupal Tools mapping to TOOLBox
+RUN ln -s $DRUPAL_TOOLS_DIR/vendor/bin/phpcs $TOOLS_TARGET_DIR \
+    && ln -s $DRUPAL_TOOLS_DIR/pareviewsh/pareview.sh $TOOLS_TARGET_DIR/pareview \
+    && chmod +x $TOOLS_TARGET_DIR/pareview \
+    && phpcs --config-set installed_paths $DRUPAL_TOOLS_DIR/vendor/drupal/coder/coder_sniffer/,$DRUPAL_TOOLS_DIR/vendor/phpcompatibility/php-compatibility,$DRUPAL_TOOLS_DIR/drupalsecure
 
 # Install sonar-scanner
 RUN cd /tmp \
