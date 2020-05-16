@@ -120,6 +120,16 @@ RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - \
 # Install lighthouse
 RUN npm install -g lighthouse
 
+# Install ACQUIA CLI tools
+RUN \
+  wget -O /usr/local/bin/acli https://github.com/acquia/cli/releases/download/1.3.0/acli.phar \
+  && chmod +x /usr/local/bin/acli
+
+# Install Platform.sh CLI tools
+RUN \
+  wget -O /usr/local/bin/platform https://github.com/platformsh/platformsh-cli/releases/download/v3.64.2/platform.phar \
+  && chmod +x /usr/local/bin/platform
+
 # Perform Clean Up
 RUN rm -rf $COMPOSER_HOME/cache && apt-get purge -y --auto-remove $BUILD_DEPS
 
