@@ -16,19 +16,22 @@ LABEL version="1.0"
 ARG PHP_VERSION="7.3"
 
 # Environment Variables
+ENV ACQUIA_CLI="1.3.0"
 ENV APT_OPTION="-yq --no-install-recommends"
-ENV BUILD_DEPS="autoconf file g++ gcc libc-dev pkg-config re2c"
+ENV BUILD_DEPS="autoconf build-essential file g++ gcc libc-dev pkg-config re2c"
 ENV COMPOSER_ALLOW_SUPERUSER 1
 ENV COMPOSER_HOME=$TOOLS_TARGET_DIR/.composer
 ENV DEBIAN_FRONTEND="noninteractive"
-ENV DRUPAL_CHECK_VERSION="1.0.9"
+ENV DRUPAL_CHECK_VERSION="1.1.5"
 ENV DRUPAL_TOOLS_DIR="/drupaltools"
 ENV LIB_DEPS="zlib1g-dev libzip-dev"
+ENV NODE_VERSION=12.6.0
 ENV PATH="$PATH:/src/bin:$TOOLS_TARGET_DIR:$TOOLS_TARGET_DIR/.composer/vendor/bin"
+ENV PLATFORMSH_CLI="v3.64.2"
 ENV SONAR_CLI="4.4.0.2170"
-ENV TOOLS_DEPS="apt-utils curl git graphviz make rsync software-properties-common unzip zip wget"
+ENV TOOLS_DEPS="apt-utils curl git git-core graphviz libssl-dev make openssl rsync software-properties-common unzip zip wget"
 ENV TOOLS_TARGET_DIR="/tools"
-ENV TOOLS_VERSION="1.20.0"
+ENV TOOLS_VERSION="1.33.0"
 
 # Prepare system by upgrading existing
 RUN apt-get update 
@@ -38,7 +41,6 @@ RUN apt-get install $APT_OPTION $BUILD_DEPS $LIB_DEPS $TOOLS_DEPS
 
 # Install Required Packages.
 RUN apt-get install $APT_OPTION\
-  build-essential \
   chromium-browser \
   chromium-chromedriver 
 
@@ -82,13 +84,16 @@ RUN git clone https://github.com/nikic/php-ast.git && cd php-ast\
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # PHP Tools Install & Configure
-RUN mkdir -p $TOOLS_TARGET_DIR && curl -Ls https://github.com/jakzal/toolbox/releases/download/v$TOOLS_VERSION/toolbox.phar -o $TOOLS_TARGET_DIR/toolbox \
+RUN mkdir -p $TOOLS_TARGET_DIR && curl -Ls https://github.com/jakzal/toolbox/releases/download/v${TOOLS_VERSION}/toolbox.phar -o $TOOLS_TARGET_DIR/toolbox \
   && chmod +x $TOOLS_TARGET_DIR/toolbox \
   && php $TOOLS_TARGET_DIR/toolbox install
 
 # copy composer configurations
 COPY composer.json /$DRUPAL_TOOLS_DIR/composer.json
 COPY composer.lock /$DRUPAL_TOOLS_DIR/composer.lock
+
+# Remove PHPCS installed by toolbox
+#RUN rm $TOOLS_TARGET_DIR/phpcs 
 
 # Install Dependency
 WORKDIR $DRUPAL_TOOLS_DIR
@@ -113,21 +118,28 @@ RUN cd /tmp \
   && ln -s /opt/sonar-scanner-$SONAR_CLI-linux/bin/sonar-scanner /usr/bin/sonar-scanner \
   && rm -f sonar-scanner-cli-$SONAR_CLI-linux.zip
 
-# Install node
-RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - \
-  && apt-get install $APT_OPTION nodejs build-essential
+# Install node via NVM
+RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.37.2/install.sh | bash
+ENV NVM_DIR=/root/.nvm
+RUN . "$NVM_DIR/nvm.sh" && nvm install ${NODE_VERSION}
+RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION}
+RUN . "$NVM_DIR/nvm.sh" && nvm alias default v${NODE_VERSION}
+# Put NodeJS in the Path.
+ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
+RUN node --version
+RUN npm --version
 
 # Install lighthouse
 RUN npm install -g lighthouse
 
 # Install ACQUIA CLI tools
 RUN \
-  wget -O /usr/local/bin/acli https://github.com/acquia/cli/releases/download/1.3.0/acli.phar \
+  wget -O /usr/local/bin/acli https://github.com/acquia/cli/releases/download/$ACQUIA_CLI/acli.phar \
   && chmod +x /usr/local/bin/acli
 
 # Install Platform.sh CLI tools
 RUN \
-  wget -O /usr/local/bin/platform https://github.com/platformsh/platformsh-cli/releases/download/v3.64.2/platform.phar \
+  wget -O /usr/local/bin/platform https://github.com/platformsh/platformsh-cli/releases/download/$PLATFORMSH_CLI/platform.phar \
   && chmod +x /usr/local/bin/platform
 
 # Perform Clean Up
